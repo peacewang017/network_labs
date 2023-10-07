@@ -7,9 +7,9 @@
 #include <cstdio>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 
-const int PORT = 8080;
 const int BUFFER_SIZE = 1024;
 
 // 分类文件
@@ -38,7 +38,15 @@ std::string readFile(const std::string &filename) {
 }
 
 // 处理客户端请求
-void handleRequest(int clientSocket) {
+void handleRequest(int clientSocket, const std::string &rootDirectory) {
+    // 获取客户端地址信息
+    struct sockaddr_in clientAddr;
+    socklen_t addrLen = sizeof(clientAddr);
+    getpeername(clientSocket, (struct sockaddr *)&clientAddr, &addrLen);
+    char clientIP[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIP, INET_ADDRSTRLEN);
+    int clientPort = ntohs(clientAddr.sin_port);
+
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
     int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -56,15 +64,16 @@ void handleRequest(int clientSocket) {
     requestLineStream >> method >> path >> httpVersion;
 
     if (method != "GET") {
+        // 输出错误信息
+        std::cerr << "Received invalid request from " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
         close(clientSocket);
         return;
     }
 
-    std::string rootDirectory = "./webroot";
     std::string filename = rootDirectory + path;
 
     if (filename == rootDirectory + "/") {
-        filename = "./webroot/index.html";
+        filename = rootDirectory + "/index.html";
     }
 
     std::string fileExtension = filename.substr(filename.find_last_of(".") + 1);
@@ -72,9 +81,14 @@ void handleRequest(int clientSocket) {
 
     std::string fileContent = readFile(filename);
     if (fileContent.empty()) {
+        // 输出文件未找到信息
+        std::cerr << "Requested file not found for " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
         close(clientSocket);
         return;
     }
+
+    // 输出请求来源信息
+    std::cout << "Received request from " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
 
     // 构建HTTP响应
     std::ostringstream response;
@@ -86,10 +100,23 @@ void handleRequest(int clientSocket) {
 
     // 发送HTTP响应
     send(clientSocket, response.str().c_str(), response.str().size(), 0);
+
+    // 输出请求处理完成信息
+    std::cout << "Sent response to " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
+
     close(clientSocket);
 }
 
-int main() {
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <root_directory>" << std::endl;
+        return 1;
+    }
+
+    int PORT = std::atoi(argv[1]);
+    std::string rootDirectory = argv[2];
+
     int serverSocket, clientSocket;
     struct sockaddr_in serverAddr, clientAddr;
     socklen_t addrLen = sizeof(clientAddr);
@@ -125,7 +152,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "Server is running on port " << PORT << std::endl;
+    std::cout << "Server is running on port " << PORT << " with root directory " << rootDirectory << std::endl;
 
     while (1) {
         // 接受客户端连接
@@ -139,7 +166,7 @@ int main() {
         if (fork() == 0) {
             // 子进程
             close(serverSocket);  // 关闭父进程的套接字副本
-            handleRequest(clientSocket);
+            handleRequest(clientSocket, rootDirectory);
             exit(0);
         }
 
