@@ -81,10 +81,20 @@ void handleRequest(int clientSocket, const std::string &rootDirectory) {
 
     std::string fileContent = readFile(filename);
     if (fileContent.empty()) {
-        // 输出文件未找到信息
-        std::cerr << "Requested file not found for " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
-        close(clientSocket);
-        return;
+        // 文件不存在，尝试读取webroot/error.html
+        filename = rootDirectory + "/error.html";
+        fileContent = readFile(filename);
+
+        if (fileContent.empty()) {
+            // 如果error.html文件也不存在，输出文件未找到信息
+            std::cerr << "Requested file not found for " << clientIP << ":" << clientPort << " - " << requestLine << std::endl;
+            close(clientSocket);
+            return;
+        }
+
+        // 如果error.html文件存在，更新MIME类型
+        fileExtension = "html";
+        mimeType = "text/html";
     }
 
     // 输出请求来源信息
