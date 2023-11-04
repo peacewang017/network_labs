@@ -130,7 +130,7 @@ CMAKE_OBJCOPY:FILEPATH=/usr/bin/objcopy
 CMAKE_OBJDUMP:FILEPATH=/usr/bin/objdump
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=GBN
+CMAKE_PROJECT_NAME:STATIC=SR
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -191,7 +191,7 @@ GBN_SOURCE_DIR:STATIC=/home/peacewang/sources/network/lab2/StopWait
 NETSIM_LIB:FILEPATH=/home/peacewang/sources/network/lab2/StopWait/lib/libnetsim.a
 
 //No help, variable specified on the command line.
-PROJECT:STRING=GBN
+PROJECT:STRING=SR
 
 //Value Computed by CMake
 SR_BINARY_DIR:STATIC=/home/peacewang/sources/network/lab2/StopWait
